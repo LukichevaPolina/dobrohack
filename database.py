@@ -84,8 +84,54 @@ class Database:
             self.cur.execute(""" INSERT INTO “СФЕРА - IT” VALUES (id_sphere, username); """)
 
     def add_task(self, id_nko, id_sphere, description):
-        return self.cur.execute(""" INSERT INTO “ЗАДАЧА” 
-        VALUES (SELECT COUNT(*) FROM "ЗАДАЧА", id_nko, id_sphere, id_it = None, description, condition = 1) """)
+        return self.cur.execute(""" INSERT INTO “ЗАДАЧА” VALUES 
+                                    (SELECT COUNT(*) FROM "ЗАДАЧА", id_nko, 
+                                    id_sphere, id_it = None, description, condition = 1) """)
 
+    def get_tasks4moderator(self):
+        return self.cur.execute(""" SELECT * FROM “ЗАДАЧА” WHERE “ЗАДАЧА”."СОСТОЯНИЕ" = 1 """)
+
+    def update_condition_task(self, selected_task, condition):
+        """если задачу на доработку, то передать 2, иначе 3"""
+        self.cur.execute(""" UPDATE “ЗАДАЧА” SET "СОСТОЯНИЕ"=condition WHERE ID=selected_task """)
+
+    def update_task(self, selected_task, id_sphere, description):
+        self.cur.execute(""" UPDATE “ЗАДАЧА” SET "СОСТОЯНИЕ" = 1,
+                             "СФЕРА" = id_sphere, "ОПИСАНИЕ" = description WHERE
+                             ID = selected_task(?); """)
+
+    def get_task4it(self):
+        self.cur.execute(""" SELECT ЗАКАЗЧИК, СФЕРА.НАЗВАНИЕ, ОПИСАНИЕ FROM ЗАДАЧА, СФЕРА 
+                             JOIN  "СФЕРА - IT" ON  "СФЕРА - IT"."СФЕРА" = СФЕРА.ID 
+                             WHERE  СФЕРА.ID = ЗАДАЧА.СФЕРА AND  
+                             "СФЕРА - IT"."ПРЕДСТАВИТЕЛЬ IT" = id_it
+                             ;""")
+
+    def select_task(self, id_it, selected_task):
+        self.cur.execute(""" UPDATE “ЗАДАЧИ” SET "СОСТОЯНИЕ"=4, “ИСПОЛНИТЕЛЬ”=id_it WHERE ID=selected_task; """)
+
+    def submit_task(self, selected_task):
+        self.cur.execute(""" UPDATE “ЗАДАЧИ” SET "СОСТОЯНИЕ"=5 WHERE ID=selected_task; """)
+
+    def get_condition4nko(self, id_nko):
+        return self.cur.execute(""" SELECT ИСПОЛНИТЕЛЬ, ОПИСАНИЕ, СОСТОЯНИЕ FROM “ЗАДАЧИ” WHERE “ЗАКАЗЧИК”=id_nko; """)
+
+    def delete_it(self, id_it):
+        self.cur.execute(""" DELETE FROM "ПРЕДСТАВИТЕЛЬ IT" WHERE ID = id_it;
+                             UPDATE “ЗАДАЧА” SET "СОСТОЯНИЕ"=3 
+                             WHERE ИСПОЛНИТЕЛЬ = id_it;
+                             DELETE FROM "СФЕРА - IT" WHERE "ПРЕДСТАВИТЕЛЬ IT" = id_it; """)
+
+    def delete_nko(self, id_nko):
+        self.cur.execute(""" DELETE FROM "ПРЕДСТАВИТЕЛЬ НКО" WHERE ID = id_nko;
+                             DELETE FROM “ЗАДАЧА” WHERE "ЗАКАЗЧИК" = id_nko; """)
+
+    def delete_moderator(self, id_moderator):
+        self.cur.execute(""" DELETE FROM "МОДЕРАТОР" WHERE ID = id_moderator; """)
+
+    def update_sphere(self):
+        self.cur.execute(""" DELETE FROM "СФЕРА - IT" WHERE "ПРЕДСТАВИТЕЛЬ IT" = id_it;
+                             INSERT INTO “СФЕРА - IT” VALUES 
+                             (id_sphere, id_it); """)
 
 bot_db = Database()
